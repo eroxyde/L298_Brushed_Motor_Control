@@ -1,39 +1,9 @@
 /**
   ******************************************************************************
-  * @file    TIM/TIM_TimeBase/Src/main.c
-  * @author  MCD Application Team
-  * @version V1.4.0
-  * @date    29-April-2016
-  * @brief   This sample code shows how to use STM32F1xx TIM HAL API to generate
-  *          a time base of one second with the corresponding Interrupt request.
-  ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; COPYRIGHT(c) 2016 STMicroelectronics</center></h2>
-  *
-  * Redistribution and use in source and binary forms, with or without modification,
-  * are permitted provided that the following conditions are met:
-  *   1. Redistributions of source code must retain the above copyright notice,
-  *      this list of conditions and the following disclaimer.
-  *   2. Redistributions in binary form must reproduce the above copyright notice,
-  *      this list of conditions and the following disclaimer in the documentation
-  *      and/or other materials provided with the distribution.
-  *   3. Neither the name of STMicroelectronics nor the names of its contributors
-  *      may be used to endorse or promote products derived from this software
-  *      without specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-  *
-  ******************************************************************************
+  * @file    ... /Src/main.c
+  * @author  Eric Cloutier
+  * @version V1.0
+  * @date    28-Mars-2017
   */
 
 /* Includes ------------------------------------------------------------------*/
@@ -114,7 +84,7 @@ int main(void)
       3) each time HAL_RCC_ClockConfig() is called to configure the system clock frequency
   ----------------------------------------------------------------------- */
 
-  /* Compute the prescaler value to have TIMx counter clock equal to 10000 Hz */
+  /* Compute the prescaler value to have TIMx counter clock equal to ___Hz */
   uwPrescalerValue = (uint32_t)(SystemCoreClock / 2000000) - 1;
 
   /* Set TIMx instance */
@@ -122,7 +92,7 @@ int main(void)
 
   /* Initialize TIMx peripheral as follows:
        + Period (ARR)   = (TIM3 counter clock / TIM3 output clock ) - 1
-       + Prescaler = (SystemCoreClock/10000) - 1
+       + Prescaler = (SystemCoreClock/2000000) - 1
        + ClockDivision = 0
        + Counter direction = Up
   */
@@ -207,6 +177,31 @@ int main(void)
   GPIO_InitStruct.Pin = GPIO_PIN_7;								// PC7 for L298 D
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);
+
+
+  /*##-1- Configure the UART peripheral ######################################*/
+  /* Put the USART peripheral in the Asynchronous mode (UART Mode) */
+  /* UART configured as follows:
+      - Word Length = 8 Bits (7 data bit + 1 parity bit) :
+	                  BE CAREFUL : Program 7 data bits + 1 parity bit in PC HyperTerminal
+      - Stop Bit    = One Stop bit
+      - Parity      = ODD parity
+      - BaudRate    = 9600 baud
+      - Hardware flow control disabled (RTS and CTS signals) */
+  UartHandle.Instance          = USARTx;
+
+  UartHandle.Init.BaudRate     = 9600;
+  UartHandle.Init.WordLength   = UART_WORDLENGTH_8B;
+  UartHandle.Init.StopBits     = UART_STOPBITS_1;
+  UartHandle.Init.Parity       = UART_PARITY_ODD;
+  UartHandle.Init.HwFlowCtl    = UART_HWCONTROL_NONE;
+  UartHandle.Init.Mode         = UART_MODE_TX_RX;
+
+  if (HAL_UART_Init(&UartHandle) != HAL_OK)
+  {
+    /* Initialization Error */
+    Error_Handler();
+  }
 
   while (1)
   {
