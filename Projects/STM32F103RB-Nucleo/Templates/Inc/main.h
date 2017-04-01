@@ -5,7 +5,7 @@
   * @version V1.0
   * @date    28-Mars-2017
   */
-
+  
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __MAIN_H
 #define __MAIN_H
@@ -13,20 +13,15 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f1xx_hal.h"
 #include "stm32f1xx_nucleo.h"
-
-
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
-
 /* Definition for TIMx clock resources */
 #define TIMx                           TIM3
 #define TIMx_CLK_ENABLE()              __HAL_RCC_TIM3_CLK_ENABLE()
 
-
 /* Definition for TIMx's NVIC */
 #define TIMx_IRQn                      TIM3_IRQn
 #define TIMx_IRQHandler                TIM3_IRQHandler
-
 
 /* Definition for TIMx Channel Pins */
 #define TIMx_CHANNEL_GPIO_PORT()       __HAL_RCC_GPIOA_CLK_ENABLE()
@@ -54,10 +49,8 @@
 #define USARTx_RX_GPIO_PORT              GPIOA
 
 /* Definition for USARTx's DMA */
-
 #define USARTx_TX_DMA_CHANNEL             DMA1_Channel4
 #define USARTx_RX_DMA_CHANNEL             DMA1_Channel5
-
 
 /* Definition for USARTx's NVIC */
 #define USARTx_DMA_TX_IRQn                DMA1_Channel4_IRQn
@@ -76,11 +69,10 @@
 #define RXBUFFERSIZE                      10
 
 /* Exported macro ------------------------------------------------------------*/
-
 #define COUNTOF(__BUFFER__)   (sizeof(__BUFFER__) / sizeof(*(__BUFFER__)))
 
 /* Exported functions ------------------------------------------------------- */
 
 #endif /* __MAIN_H */
 
-/*****END OF FILE****/
+/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
