@@ -20,15 +20,15 @@
 #define TIMx_CLK_ENABLE()              __HAL_RCC_TIM3_CLK_ENABLE()
 
 /* Definition for TIMx's NVIC */
-#define TIMx_IRQn                      TIM3_IRQn
-#define TIMx_IRQHandler                TIM3_IRQHandler
+//#define TIMx_IRQn                      TIM3_IRQn
+//#define TIMx_IRQHandler                TIM3_IRQHandler
 
 /* Definition for TIMx Channel Pins */
 #define TIMx_CHANNEL_GPIO_PORT()       __HAL_RCC_GPIOA_CLK_ENABLE()
 #define TIMx_GPIO_PORT_CHANNEL1        GPIOA
 #define TIMx_GPIO_PIN_CHANNEL1         GPIO_PIN_6
 
-#define TIMx_GPIO_AF_CHANNEL1          /
+//#define TIMx_GPIO_AF_CHANNEL1          /
 
 #define L298_GPIOC_PORT()       		__HAL_RCC_GPIOC_CLK_ENABLE()
 

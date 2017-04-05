@@ -34,6 +34,8 @@ uint8_t aTxBuffer[] = "\n\r ****UART-Hyperterminal communication based on DMA***
 /* Buffer used for reception */
 uint8_t aRxBuffer[RXBUFFERSIZE];
 
+uint32_t duty_cycle = 0;
+
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void Error_Handler(void);
@@ -73,9 +75,9 @@ int main(void)
 	 TIM3CLK = PCLK1*2
 	 PCLK1   = HCLK/2
 	=> TIM3CLK = PCLK1*2 = (HCLK/2)*2 = HCLK = SystemCoreClock
-	To get TIM3 counter clock at 10 KHz, the Prescaler is computed as following:
+	To get TIM3 counter clock at 16 MHz, the Prescaler is computed as following:
 	Prescaler = (TIM3CLK / TIM3 counter clock) - 1
-	Prescaler = (SystemCoreClock /10 KHz) - 1
+	Prescaler = (SystemCoreClock /16 MHz) - 1
 	Note:
 	SystemCoreClock variable holds HCLK frequency and is defined in system_stm32f1xx.c file.
 	Each time the core clock (HCLK) changes, user had to update SystemCoreClock
@@ -83,23 +85,24 @@ int main(void)
 	This variable is updated in three ways:
 	1) by calling CMSIS function SystemCoreClockUpdate()
 	2) by calling HAL API function HAL_RCC_GetSysClockFreq()
-	3) each time HAL_RCC_ClockConfig() is called to configure the system clock frequency
+	   each time HAL_RCC_ClockConfig() is called to configure the system clock frequency
 	----------------------------------------------------------------------- */
 
-	/* Compute the prescaler value to have TIMx counter clock equal to ___Hz */
-	uwPrescalerValue = (uint32_t)(SystemCoreClock / 2000000) - 1;
+	/* Compute the prescaler value to have TIMx counter clock equal to 32 MHz */
+	uwPrescalerValue = (uint32_t)(SystemCoreClock / 16000000) - 1;
 
 	/* Set TIMx instance */
 	TimHandle.Instance = TIMx;
 
 	/* Initialize TIMx peripheral as follows:
-	 + Period (ARR)   = (TIM3 counter clock / TIM3 output clock ) - 1
-	 + Prescaler = (SystemCoreClock/2000000) - 1
+	 + Period (ARR)   = (TIM3 counter clock / TIM3 output clock ) - 1 = (16000000 /10000) - 1 = 1599
+	 + TIM3 output clock = 10 kHz
+	 + Prescaler = (SystemCoreClock/ 16 MHz) - 1
 	 + ClockDivision = 0
 	 + Counter direction = Up
 	*/
-	TimHandle.Init.Period            = 665;
 	TimHandle.Init.Prescaler         = uwPrescalerValue;
+	TimHandle.Init.Period            = 1599;
 	TimHandle.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
 	TimHandle.Init.CounterMode       = TIM_COUNTERMODE_UP;
 	TimHandle.Init.RepetitionCounter = 0;
@@ -115,7 +118,7 @@ int main(void)
 	sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
 	sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
 	sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-	sConfigOC.Pulse = 500;
+	sConfigOC.Pulse = 100;
 
 	if(HAL_TIM_PWM_ConfigChannel(&TimHandle, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
 	{
@@ -132,7 +135,7 @@ int main(void)
 	* Rotary encoders counters
 	*/
 	// Set TIM2 instance //
-	TimEncoderHandle.Instance = TIM2;
+	/*TimEncoderHandle.Instance = TIM2;
 	TimEncoderHandle.Init.Period = 20000;
 	TimEncoderHandle.Init.Prescaler = TIM_CLOCKPRESCALER_DIV1;
 	TimEncoderHandle.Init.CounterMode = TIM_COUNTERMODE_UP;
@@ -143,12 +146,12 @@ int main(void)
 	sConfigEncoder.IC1Filter = 8;
 	sConfigEncoder.IC1Polarity = TIM_ICPOLARITY_RISING;
 	sConfigEncoder.IC1Prescaler = TIM_ICPSC_DIV1;
-	sConfigEncoder.IC1Selection = TIM_ICSELECTION_DIRECTTI; 	// ???
+	sConfigEncoder.IC1Selection = TIM_ICSELECTION_DIRECTTI; 	*/
 
-	if(HAL_TIM_Encoder_Init(&TimEncoderHandle, &sConfigEncoder) != HAL_OK)	// il faut coder l'interface MSP
+	/*if(HAL_TIM_Encoder_Init(&TimEncoderHandle, &sConfigEncoder) != HAL_OK)	// il faut coder l'interface MSP
 	{
 		Error_Handler();
-	}
+	}*/
 
 
 	/*************************** L298 functions *********************************/

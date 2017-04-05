@@ -26,7 +26,7 @@
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
-extern TIM_HandleTypeDef    TimHandle;
+//extern TIM_HandleTypeDef    TimHandle;
 extern UART_HandleTypeDef 	UartHandle;
 
 /* Private function prototypes -----------------------------------------------*/
@@ -146,10 +146,10 @@ void SysTick_Handler(void)
   * @param  None
   * @retval None
   */
-void TIMx_IRQHandler(void)
+/*void TIMx_IRQHandler(void)
 {
   HAL_TIM_IRQHandler(&TimHandle);
-}
+}*/
 
 /**
   * @brief  This function handles DMA RX interrupt request.
