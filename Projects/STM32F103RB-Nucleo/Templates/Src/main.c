@@ -34,11 +34,13 @@ uint8_t aTxBuffer[] = "\n\r ****UART-Hyperterminal communication based on DMA***
 /* Buffer used for reception */
 uint8_t aRxBuffer[RXBUFFERSIZE];
 
-uint32_t duty_cycle = 0;
+/* PWM */
+uint16_t duty_cycle = 0;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void Error_Handler(void);
+void setDutyCycle(uint8_t dir, uint16_t dutyCycle);
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -118,17 +120,17 @@ int main(void)
 	sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
 	sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
 	sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-	sConfigOC.Pulse = 100;
+	sConfigOC.Pulse = duty_cycle;
 
 	if(HAL_TIM_PWM_ConfigChannel(&TimHandle, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
 	{
 		Error_Handler();
 	}
 
-	if(HAL_TIM_PWM_Start(&TimHandle, TIM_CHANNEL_1) != HAL_OK)	// Bridge A V_enable
+	/*if(HAL_TIM_PWM_Start(&TimHandle, TIM_CHANNEL_1) != HAL_OK)	// Bridge A V_enable
 	{
 		Error_Handler();
-	}
+	}*/
 
 	/*##-1- Configure the TIM2 peripheral #######################################*/
 	/* -----------------------------------------------------------------------
@@ -163,14 +165,16 @@ int main(void)
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
 	GPIO_InitStruct.Pin = GPIO_PIN_6;								// PC6 for L298 C
 	HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);
+	//HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);
 
 	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
 	GPIO_InitStruct.Pull = GPIO_PULLUP;
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
 	GPIO_InitStruct.Pin = GPIO_PIN_7;								// PC7 for L298 D
 	HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);
+	//HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);
+	//duty_cycle = 800;
+	//setDutyCycle(CW, duty_cycle);
 
 
 	/*##-1- Configure the UART peripheral ######################################*/
@@ -197,11 +201,20 @@ int main(void)
 		Error_Handler();
 	}
 
-	/*##-2- Start the transmission process #####################################*/
+	/*## Start the transmission process #####################################*/
 	/* User start transmission data through "TxBuffer" buffer */
 	if (HAL_UART_Transmit_DMA(&UartHandle, (uint8_t *)aTxBuffer, TXBUFFERSIZE) != HAL_OK)
 	{
-	/* Transfer error in transmission process */
+		/* Transfer error in transmission process */
+		Error_Handler();
+	}
+
+	/*## Put UART peripheral in reception process ###########################*/
+	/* Any data received will be stored in "RxBuffer" buffer : the number max of
+	 data received is 10 */
+	if (HAL_UART_Receive_DMA(&UartHandle, (uint8_t *)aRxBuffer, RXBUFFERSIZE) != HAL_OK)
+	{
+	/* Transfer error in reception process */
 		Error_Handler();
 	}
 
@@ -209,6 +222,7 @@ int main(void)
 	// Foreground processing
 	while (1)
 	{
+
 	}
 }
 
@@ -275,6 +289,46 @@ static void Error_Handler(void)
 	while (1)
 	{
 	}
+}
+
+/**
+  * @brief  This function set the direction and duty cycle for the PWM
+  * @param  dir 		: CW or CCW
+  * @param	dutyCycle	: 0 to 1599
+  * @retval None
+  */
+void setDutyCycle(uint8_t dir, uint16_t dutyCycle)
+{
+	if(dutyCycle>1599)
+	{
+		sConfigOC.Pulse = 1599;
+	}
+	else
+	{
+		sConfigOC.Pulse = dutyCycle;
+	}
+
+	if(HAL_TIM_PWM_ConfigChannel(&TimHandle, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+	{
+		Error_Handler();
+	}
+
+	if(HAL_TIM_PWM_Start(&TimHandle, TIM_CHANNEL_1) != HAL_OK)	// Bridge A V_enable
+	{
+		Error_Handler();
+	}
+
+	if(dir==CW)
+	{
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);		// PC6 for L298 C
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);	// PC7 for L298 D
+	}
+	else
+	{
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);	// PC6 for L298 C
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_SET);		// PC7 for L298 D
+	}
+
 }
 
 #ifdef  USE_FULL_ASSERT
