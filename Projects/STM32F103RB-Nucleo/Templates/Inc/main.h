@@ -13,7 +13,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f1xx_hal.h"
 #include "stm32f1xx_nucleo.h"
-#include "motor.h"
 
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
@@ -68,7 +67,7 @@
 #define TXBUFFERSIZE                      (COUNTOF(aTxBuffer) - 1)
 
 /* Size of Reception buffer */
-#define RXBUFFERSIZE                      10
+#define RXBUFFERSIZE                      6
 
 /* Exported macro ------------------------------------------------------------*/
 #define COUNTOF(__BUFFER__)   (sizeof(__BUFFER__) / sizeof(*(__BUFFER__)))
