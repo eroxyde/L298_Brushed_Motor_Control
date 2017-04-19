@@ -65,19 +65,23 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim)
 {
   GPIO_InitTypeDef   GPIO_InitStruct;
   /*##-1- Enable peripherals and GPIO Clocks #################################*/
-  /* TIMx Peripheral clock enable */
-  TIMx_CLK_ENABLE();
+  /* TIM3 Peripheral clock enable */
+  //TIMx_CLK_ENABLE();
+  __HAL_RCC_TIM3_CLK_ENABLE();
 
   /* Enable all GPIO Channels Clock requested */
-  TIMx_CHANNEL_GPIO_PORT();
+  //TIMx_CHANNEL_GPIO_PORT();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
 
   /* Common configuration for all channels */
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
 
-  GPIO_InitStruct.Pin = TIMx_GPIO_PIN_CHANNEL1;
-  HAL_GPIO_Init(TIMx_GPIO_PORT_CHANNEL1, &GPIO_InitStruct);
+  //GPIO_InitStruct.Pin = TIMx_GPIO_PIN_CHANNEL1;
+  GPIO_InitStruct.Pin = GPIO_PIN_6;
+  //HAL_GPIO_Init(TIMx_GPIO_PORT_CHANNEL1, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 }
 
 /**
@@ -101,8 +105,6 @@ void HAL_UART_MspInit(UART_HandleTypeDef *huart)
   /* Enable GPIO clock */
   USARTx_TX_GPIO_CLK_ENABLE();
   USARTx_RX_GPIO_CLK_ENABLE();
-
-
 
   /* Enable USARTx clock */
   USARTx_CLK_ENABLE();
@@ -180,7 +182,6 @@ void HAL_UART_MspInit(UART_HandleTypeDef *huart)
   */
 void HAL_UART_MspDeInit(UART_HandleTypeDef *huart)
 {
-
   static DMA_HandleTypeDef hdma_tx;
   static DMA_HandleTypeDef hdma_rx;
 
@@ -203,6 +204,40 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef *huart)
   /*##-4- Disable the NVIC for DMA ###########################################*/
   HAL_NVIC_DisableIRQ(USARTx_DMA_TX_IRQn);
   HAL_NVIC_DisableIRQ(USARTx_DMA_RX_IRQn);
+}
+
+/**
+  * @brief TIM MSP Initialization
+  *        This function configures the hardware resources used in this example:
+  *           - Peripheral's clock enable
+  *           - Peripheral's GPIO Configuration
+  * @param htim: TIM handle pointer
+  * @retval None
+  */
+void HAL_TIM_Encoder_MspInit(TIM_HandleTypeDef *htim)
+{
+  GPIO_InitTypeDef   GPIO_InitStruct;
+
+  /*##-1- Enable peripherals and GPIO Clocks #################################*/
+  /* TIM1 Peripheral clock enable */
+  __HAL_RCC_TIM1_CLK_ENABLE();
+
+  /* Enable GPIO Channels Clock */
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+
+  /*##-2- Configure I/Os #####################################################*/
+  /* Common configuration for all channels */
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+
+  /* Channel 1 configuration */
+  GPIO_InitStruct.Pin = GPIO_PIN_8;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /* Channel 2 configuration */
+  GPIO_InitStruct.Pin = GPIO_PIN_9;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 }
 
 /**

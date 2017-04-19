@@ -9,6 +9,9 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "string.h"
+#include "stdlib.h"
+#include "motor.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -17,30 +20,38 @@
 /* TIM handle declaration */
 TIM_HandleTypeDef    	TimHandle;
 TIM_OC_InitTypeDef 		sConfigOC;
-TIM_HandleTypeDef    	TimEncoderHandle;
-TIM_Encoder_InitTypeDef sConfigEncoder;
+TIM_HandleTypeDef    	EncoderHandle;
+TIM_Encoder_InitTypeDef sEncoderConfig;
 
 /* Prescaler declaration */
-uint32_t uwPrescalerValue = 0;
+uint32_t uwPrescalerValue;
 
 static GPIO_InitTypeDef  GPIO_InitStruct;
 
 /* UART handler declaration */
 UART_HandleTypeDef UartHandle;
 
-/* Buffer used for transmission */
-uint8_t aTxBuffer[] = "\n\r ****UART-Hyperterminal communication based on DMA****\n\r Enter 10 characters using keyboard :\n\r";
+/* Buffers used for transmission */
+uint8_t aTxBuffer[] = "\n\r ****Servomotor UART communication****\n\r Enter 6 a characters command using keyboard :\n\r";
+char aStatusTxBuf[15];
 
 /* Buffer used for reception */
 uint8_t aRxBuffer[RXBUFFERSIZE];
 
-/* PWM */
-uint16_t duty_cycle = 0;
+/* Motor */
+static uint16_t aDutyCycle;
+static Motor_State aState;
+static uint8_t aDirection;
+
+/* Encoder */
+static uint16_t aCount;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void Error_Handler(void);
 void setDutyCycle(uint8_t dir, uint16_t dutyCycle);
+void chkBuf(void);
+void parseCom(void);
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -70,7 +81,7 @@ int main(void)
 	/* Configure LED2 */
 	BSP_LED_Init(LED2);
 
-	/*##-1- Configure the TIM3 peripheral #######################################*/
+	/*## Configure the TIM3 peripheral #######################################*/
 	/* -----------------------------------------------------------------------
 	In this example TIM3 input clock (TIM3CLK)  is set to APB1 clock (PCLK1) x2,
 	since APB1 prescaler is set to 4 (0x100).
@@ -120,41 +131,44 @@ int main(void)
 	sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
 	sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
 	sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-	sConfigOC.Pulse = duty_cycle;
+	sConfigOC.Pulse = aDutyCycle;
 
 	if(HAL_TIM_PWM_ConfigChannel(&TimHandle, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
 	{
 		Error_Handler();
 	}
 
-	/*if(HAL_TIM_PWM_Start(&TimHandle, TIM_CHANNEL_1) != HAL_OK)	// Bridge A V_enable
-	{
-		Error_Handler();
-	}*/
-
-	/*##-1- Configure the TIM2 peripheral #######################################*/
+	/*## Configure the TIM1 peripheral #######################################*/
 	/* -----------------------------------------------------------------------
 	* Rotary encoders counters
 	*/
-	// Set TIM2 instance //
-	/*TimEncoderHandle.Instance = TIM2;
-	TimEncoderHandle.Init.Period = 20000;
-	TimEncoderHandle.Init.Prescaler = TIM_CLOCKPRESCALER_DIV1;
-	TimEncoderHandle.Init.CounterMode = TIM_COUNTERMODE_UP;
-	TimEncoderHandle.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-	TimEncoderHandle.Init.RepetitionCounter = 0;
+	// Set TIM1 instance //
+	EncoderHandle.Instance = TIM1;
+	EncoderHandle.Init.Period = 65535;
+	EncoderHandle.Init.Prescaler = 0;
+	EncoderHandle.Init.ClockDivision = 0;
+	EncoderHandle.Init.CounterMode = TIM_COUNTERMODE_UP;
+	EncoderHandle.Init.RepetitionCounter = 0;
 
-	sConfigEncoder.EncoderMode = TIM_ENCODERMODE_TI1;
-	sConfigEncoder.IC1Filter = 8;
-	sConfigEncoder.IC1Polarity = TIM_ICPOLARITY_RISING;
-	sConfigEncoder.IC1Prescaler = TIM_ICPSC_DIV1;
-	sConfigEncoder.IC1Selection = TIM_ICSELECTION_DIRECTTI; 	*/
+	sEncoderConfig.EncoderMode = TIM_ENCODERMODE_TI12;
 
-	/*if(HAL_TIM_Encoder_Init(&TimEncoderHandle, &sConfigEncoder) != HAL_OK)	// il faut coder l'interface MSP
+	sEncoderConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
+	sEncoderConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
+	sEncoderConfig.IC1Prescaler = TIM_ICPSC_DIV1;
+	sEncoderConfig.IC1Filter = 0;
+
+	sEncoderConfig.IC2Polarity = TIM_ICPOLARITY_RISING;
+	sEncoderConfig.IC2Selection = TIM_ICSELECTION_DIRECTTI;
+	sEncoderConfig.IC2Prescaler = TIM_ICPSC_DIV1;
+	sEncoderConfig.IC2Filter = 0;
+
+	if(HAL_TIM_Encoder_Init(&EncoderHandle, &sEncoderConfig) != HAL_OK)	// il faut coder l'interface MSP
 	{
 		Error_Handler();
-	}*/
+	}
 
+	/* Start the encoder interface */
+	HAL_TIM_Encoder_Start(&EncoderHandle, TIM_CHANNEL_ALL);
 
 	/*************************** L298 functions *********************************/
 	/****************************************************************************/
@@ -173,25 +187,28 @@ int main(void)
 	GPIO_InitStruct.Pin = GPIO_PIN_7;								// PC7 for L298 D
 	HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 	//HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);
-	//duty_cycle = 800;
-	//setDutyCycle(CW, duty_cycle);
 
+	/************************** Init var ****************************************/
+	aState = IDLE;
+	aCount = 0;
+	aDutyCycle = 0;
+	aDirection = CW;
+	//setDutyCycle(aDirection, aDutyCycle);
 
-	/*##-1- Configure the UART peripheral ######################################*/
+	/*##  Configure the UART peripheral #########################################*/
 	/* Put the USART peripheral in the Asynchronous mode (UART Mode) */
 	/* UART configured as follows:
 	 - Word Length = 8 Bits (7 data bit + 1 parity bit) :
 				  BE CAREFUL : Program 7 data bits + 1 parity bit in PC HyperTerminal
 	 - Stop Bit    = One Stop bit
-	 - Parity      = ODD parity
+	 - Parity      = none
 	 - BaudRate    = 9600 baud
 	 - Hardware flow control disabled (RTS and CTS signals) */
 	UartHandle.Instance          = USARTx;
-
 	UartHandle.Init.BaudRate     = 9600;
 	UartHandle.Init.WordLength   = UART_WORDLENGTH_8B;
 	UartHandle.Init.StopBits     = UART_STOPBITS_1;
-	UartHandle.Init.Parity       = UART_PARITY_ODD;
+	UartHandle.Init.Parity       = UART_PARITY_NONE;	//UART_PARITY_ODD;
 	UartHandle.Init.HwFlowCtl    = UART_HWCONTROL_NONE;
 	UartHandle.Init.Mode         = UART_MODE_TX_RX;
 
@@ -201,7 +218,7 @@ int main(void)
 		Error_Handler();
 	}
 
-	/*## Start the transmission process #####################################*/
+	/*## Start the transmission process ########################################*/
 	/* User start transmission data through "TxBuffer" buffer */
 	if (HAL_UART_Transmit_DMA(&UartHandle, (uint8_t *)aTxBuffer, TXBUFFERSIZE) != HAL_OK)
 	{
@@ -209,20 +226,28 @@ int main(void)
 		Error_Handler();
 	}
 
-	/*## Put UART peripheral in reception process ###########################*/
-	/* Any data received will be stored in "RxBuffer" buffer : the number max of
-	 data received is 10 */
-	if (HAL_UART_Receive_DMA(&UartHandle, (uint8_t *)aRxBuffer, RXBUFFERSIZE) != HAL_OK)
-	{
-	/* Transfer error in reception process */
-		Error_Handler();
-	}
-
 	/* Infinite loop */
-	// Foreground processing
+	// Foreground processing : round robin scheduling
 	while (1)
 	{
-
+		chkBuf();
+		parseCom();
+		// ## Send the status of operation or info ##############################//
+		if (HAL_UART_Transmit_DMA(&UartHandle, (uint8_t *)aStatusTxBuf, 15) != HAL_OK)
+		{
+		// Transfer error in transmission process //
+			Error_Handler();
+		}
+		//## Wait for the end of the transfer ###################################//
+		/*  Before starting a new communication transfer, you need to check the current
+		  state of the peripheral; if it’s busy you need to wait for the end of current
+		  transfer before starting a new one.
+		  For simplicity reasons, this example is just waiting till the end of the
+		  transfer, but application may perform other tasks while transfer operation
+		  is ongoing. */
+		while (HAL_UART_GetState(&UartHandle) != HAL_UART_STATE_READY)
+		{
+		}
 	}
 }
 
@@ -330,6 +355,74 @@ void setDutyCycle(uint8_t dir, uint16_t dutyCycle)
 	}
 
 }
+
+/**
+  * @brief  This function check if there is a command received in the Uart buffer
+  * @param  None
+  * @retval None
+  */
+void chkBuf(void)
+{
+	/*## Put UART peripheral in reception process ###########################*/
+	/* Any data received will be stored in "RxBuffer" buffer : the number max of
+	data received is 5 */
+	if (HAL_UART_Receive_DMA(&UartHandle, (uint8_t *)aRxBuffer, RXBUFFERSIZE) != HAL_OK)
+	{
+		/* Transfer error in reception process */
+		Error_Handler();
+	}
+
+	/*## Wait for 5 char (one command) ######################################*/
+	/*  Before starting a new communication transfer, you need to check the current
+	  state of the peripheral; if it’s busy you need to wait for the end of current
+	  transfer before starting a new one.
+	  For simplicity reasons, this example is just waiting till the end of the
+	  transfer, but application may perform other tasks while transfer operation
+	  is ongoing. */
+	while (HAL_UART_GetState(&UartHandle) != HAL_UART_STATE_READY)
+	{
+	}
+
+
+}
+
+/**
+  * @brief  This function read the command in the buf
+  * @param  None
+  * @retval None
+  */
+void parseCom(void)
+{
+	switch(aRxBuffer[0])
+	{
+		char num[5];
+		case 'D' :
+			memcpy(num, aRxBuffer+2, 4);
+			aDutyCycle = (uint16_t)(atoi(num));
+			if(aRxBuffer[1] == '+')
+			{
+				aDirection = CW;
+			}
+			else
+			{
+				aDirection = CCW;
+			}
+			strcpy(aStatusTxBuf, "PWM updated");
+			aState = DIRECT_PWM;
+			break;
+		/*case 'P' :
+			theState = POS;
+			break;
+		case 'S' :
+			theState = SPEED;
+			break;*/
+		default :
+			strcpy(aStatusTxBuf, "Command Error");
+			break;
+
+	}
+}
+
 
 #ifdef  USE_FULL_ASSERT
 
