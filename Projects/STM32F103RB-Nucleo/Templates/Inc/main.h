@@ -17,7 +17,7 @@
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
 /* Definition for TIMx clock resources */
-#define TIMx                           TIM3
+//#define TIMx                           TIM3
 //#define TIMx_CLK_ENABLE()              __HAL_RCC_TIM3_CLK_ENABLE()
 
 /* Definition for TIMx's NVIC */
@@ -34,34 +34,19 @@
 #define L298_GPIOC_PORT()       		__HAL_RCC_GPIOC_CLK_ENABLE()
 
 /* Definition for USARTx clock resources */
-#define USARTx                           USART2
-#define USARTx_CLK_ENABLE()              __HAL_RCC_USART2_CLK_ENABLE();
-#define DMAx_CLK_ENABLE()                __HAL_RCC_DMA1_CLK_ENABLE()		// à changer ?
-#define USARTx_RX_GPIO_CLK_ENABLE()      __HAL_RCC_GPIOA_CLK_ENABLE()
-#define USARTx_TX_GPIO_CLK_ENABLE()      __HAL_RCC_GPIOA_CLK_ENABLE()
+//#define USARTx                           USART2
+#define USARTx_CLK_ENABLE()              __HAL_RCC_USART3_CLK_ENABLE()
+#define USARTx_RX_GPIO_CLK_ENABLE()      __HAL_RCC_GPIOB_CLK_ENABLE()
+#define USARTx_TX_GPIO_CLK_ENABLE()      __HAL_RCC_GPIOB_CLK_ENABLE()
 
-#define USARTx_FORCE_RESET()             __HAL_RCC_USART1_FORCE_RESET()
-#define USARTx_RELEASE_RESET()           __HAL_RCC_USART1_RELEASE_RESET()
+#define USARTx_FORCE_RESET()             __HAL_RCC_USART3_FORCE_RESET()
+#define USARTx_RELEASE_RESET()           __HAL_RCC_USART3_RELEASE_RESET()
 
 /* Definition for USARTx Pins */
-#define USARTx_TX_PIN                    GPIO_PIN_2
-#define USARTx_TX_GPIO_PORT              GPIOA
-#define USARTx_RX_PIN                    GPIO_PIN_3
-#define USARTx_RX_GPIO_PORT              GPIOA
-
-/* Definition for USARTx's DMA */
-#define USARTx_TX_DMA_CHANNEL             DMA1_Channel4
-#define USARTx_RX_DMA_CHANNEL             DMA1_Channel5
-
-/* Definition for USARTx's NVIC */
-#define USARTx_DMA_TX_IRQn                DMA1_Channel4_IRQn
-#define USARTx_DMA_RX_IRQn                DMA1_Channel5_IRQn
-#define USARTx_DMA_TX_IRQHandler          DMA1_Channel4_IRQHandler
-#define USARTx_DMA_RX_IRQHandler          DMA1_Channel5_IRQHandler
-
-/* Definition for USARTx's NVIC */
-#define USARTx_IRQn                      USART1_IRQn
-#define USARTx_IRQHandler                USART1_IRQHandler
+#define USARTx_TX_PIN                    GPIO_PIN_10
+#define USARTx_TX_GPIO_PORT              GPIOB
+#define USARTx_RX_PIN                    GPIO_PIN_11
+#define USARTx_RX_GPIO_PORT              GPIOB
 
 /* Size of Trasmission buffer */
 #define TXBUFFERSIZE                      (COUNTOF(aTxBuffer) - 1)
@@ -76,4 +61,4 @@
 
 #endif /* __MAIN_H */
 
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
+/*****************************END OF FILE**************************************/

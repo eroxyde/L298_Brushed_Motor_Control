@@ -101,13 +101,13 @@ int main(void)
 	   each time HAL_RCC_ClockConfig() is called to configure the system clock frequency
 	----------------------------------------------------------------------- */
 
-	/* Compute the prescaler value to have TIMx counter clock equal to 32 MHz */
+	/* Compute the prescaler value to have TIM3 counter clock equal to 32 MHz */
 	uwPrescalerValue = (uint32_t)(SystemCoreClock / 16000000) - 1;
 
-	/* Set TIMx instance */
-	TimHandle.Instance = TIMx;
+	/* Set TIM3 instance */
+	TimHandle.Instance = TIM3;
 
-	/* Initialize TIMx peripheral as follows:
+	/* Initialize TIM3 peripheral as follows:
 	 + Period (ARR)   = (TIM3 counter clock / TIM3 output clock ) - 1 = (16000000 /10000) - 1 = 1599
 	 + TIM3 output clock = 10 kHz
 	 + Prescaler = (SystemCoreClock/ 16 MHz) - 1
@@ -198,19 +198,23 @@ int main(void)
 	/*##  Configure the UART peripheral #########################################*/
 	/* Put the USART peripheral in the Asynchronous mode (UART Mode) */
 	/* UART configured as follows:
-	 - Word Length = 8 Bits (7 data bit + 1 parity bit) :
-				  BE CAREFUL : Program 7 data bits + 1 parity bit in PC HyperTerminal
+	 - Word Length = 8 Bits
 	 - Stop Bit    = One Stop bit
 	 - Parity      = none
 	 - BaudRate    = 9600 baud
 	 - Hardware flow control disabled (RTS and CTS signals) */
-	UartHandle.Instance          = USARTx;
+	UartHandle.Instance          = USART3;
 	UartHandle.Init.BaudRate     = 9600;
 	UartHandle.Init.WordLength   = UART_WORDLENGTH_8B;
 	UartHandle.Init.StopBits     = UART_STOPBITS_1;
-	UartHandle.Init.Parity       = UART_PARITY_NONE;	//UART_PARITY_ODD;
+	UartHandle.Init.Parity       = UART_PARITY_NONE;
 	UartHandle.Init.HwFlowCtl    = UART_HWCONTROL_NONE;
 	UartHandle.Init.Mode         = UART_MODE_TX_RX;
+
+	if(HAL_UART_DeInit(&UartHandle) != HAL_OK)
+	{
+		Error_Handler();
+	}
 
 	if (HAL_UART_Init(&UartHandle) != HAL_OK)
 	{
@@ -220,7 +224,7 @@ int main(void)
 
 	/*## Start the transmission process ########################################*/
 	/* User start transmission data through "TxBuffer" buffer */
-	if (HAL_UART_Transmit_DMA(&UartHandle, (uint8_t *)aTxBuffer, TXBUFFERSIZE) != HAL_OK)
+	if (HAL_UART_Transmit(&UartHandle, (uint8_t *)aTxBuffer, TXBUFFERSIZE, 5000) != HAL_OK)
 	{
 		/* Transfer error in transmission process */
 		Error_Handler();
@@ -233,7 +237,7 @@ int main(void)
 		chkBuf();
 		parseCom();
 		// ## Send the status of operation or info ##############################//
-		if (HAL_UART_Transmit_DMA(&UartHandle, (uint8_t *)aStatusTxBuf, 15) != HAL_OK)
+		if (HAL_UART_Transmit(&UartHandle, (uint8_t *)aStatusTxBuf, 15, 5000) != HAL_OK)
 		{
 		// Transfer error in transmission process //
 			Error_Handler();
@@ -366,13 +370,13 @@ void chkBuf(void)
 	/*## Put UART peripheral in reception process ###########################*/
 	/* Any data received will be stored in "RxBuffer" buffer : the number max of
 	data received is 5 */
-	if (HAL_UART_Receive_DMA(&UartHandle, (uint8_t *)aRxBuffer, RXBUFFERSIZE) != HAL_OK)
+	if (HAL_UART_Receive(&UartHandle, (uint8_t *)aRxBuffer, RXBUFFERSIZE, 0x1FFFFFF) != HAL_OK)
 	{
 		/* Transfer error in reception process */
 		Error_Handler();
 	}
 
-	/*## Wait for 5 char (one command) ######################################*/
+	/*## Wait for 6 char (one command) ######################################*/
 	/*  Before starting a new communication transfer, you need to check the current
 	  state of the peripheral; if it’s busy you need to wait for the end of current
 	  transfer before starting a new one.
