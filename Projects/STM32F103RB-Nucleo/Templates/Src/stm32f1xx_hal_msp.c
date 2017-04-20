@@ -41,8 +41,9 @@ void HAL_MspDeInit(void)
 }
 
 /**
-  * @brief TIM MSP Initialization
-  *        This function configures the hardware resources used in this example:
+  * @brief TIM4 MSP Initialization
+  *        This function configures the hardware resources of the
+  *        timer used for the ISR interrupt
   *           - Peripheral's clock enable
   * @param htim: TIM handle pointer
   * @retval None
@@ -50,15 +51,15 @@ void HAL_MspDeInit(void)
 void HAL_TIM_Base_MspInit(TIM_HandleTypeDef *htim)
 {
     /*##-1- Enable peripheral clock #################################*/
-    /* TIMx Peripheral clock enable */
-    //TIMx_CLK_ENABLE();
+    /* TIM4 Peripheral clock enable */
+	__HAL_RCC_TIM4_CLK_ENABLE();
 
     /*##-2- Configure the NVIC for TIMx ########################################*/
     /* Set the TIMx priority */
-    //HAL_NVIC_SetPriority(TIMx_IRQn, 3, 0);
+    HAL_NVIC_SetPriority(TIM4_IRQn, 0, 0);
 
     /* Enable the TIMx global Interrupt */
-    //HAL_NVIC_EnableIRQ(TIMx_IRQn);
+    HAL_NVIC_EnableIRQ(TIM4_IRQn);
 }
 
 void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim)
@@ -66,11 +67,9 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim)
   GPIO_InitTypeDef   GPIO_InitStruct;
   /*##-1- Enable peripherals and GPIO Clocks #################################*/
   /* TIM3 Peripheral clock enable */
-  //TIMx_CLK_ENABLE();
   __HAL_RCC_TIM3_CLK_ENABLE();
 
   /* Enable all GPIO Channels Clock requested */
-  //TIMx_CHANNEL_GPIO_PORT();
   __HAL_RCC_GPIOA_CLK_ENABLE();
 
   /* Common configuration for all channels */

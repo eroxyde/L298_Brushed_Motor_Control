@@ -20,6 +20,11 @@
 /* TIM handle declaration */
 TIM_HandleTypeDef    	TimHandle;
 TIM_OC_InitTypeDef 		sConfigOC;
+TIM_MasterConfigTypeDef sMasterConfig;
+
+TIM_HandleTypeDef		TimHandleISR;
+TIM_SlaveConfigTypeDef	sSlaveConfig;
+
 TIM_HandleTypeDef    	EncoderHandle;
 TIM_Encoder_InitTypeDef sEncoderConfig;
 
@@ -83,7 +88,7 @@ int main(void)
 
 	/*## Configure the TIM3 peripheral #######################################*/
 	/* -----------------------------------------------------------------------
-	In this example TIM3 input clock (TIM3CLK)  is set to APB1 clock (PCLK1) x2,
+	TIM3 input clock (TIM3CLK)  is set to APB1 clock (PCLK1) x2,
 	since APB1 prescaler is set to 4 (0x100).
 	 TIM3CLK = PCLK1*2
 	 PCLK1   = HCLK/2
@@ -91,17 +96,8 @@ int main(void)
 	To get TIM3 counter clock at 16 MHz, the Prescaler is computed as following:
 	Prescaler = (TIM3CLK / TIM3 counter clock) - 1
 	Prescaler = (SystemCoreClock /16 MHz) - 1
-	Note:
-	SystemCoreClock variable holds HCLK frequency and is defined in system_stm32f1xx.c file.
-	Each time the core clock (HCLK) changes, user had to update SystemCoreClock
-	variable value. Otherwise, any configuration based on this variable will be incorrect.
-	This variable is updated in three ways:
-	1) by calling CMSIS function SystemCoreClockUpdate()
-	2) by calling HAL API function HAL_RCC_GetSysClockFreq()
-	   each time HAL_RCC_ClockConfig() is called to configure the system clock frequency
-	----------------------------------------------------------------------- */
+	-------------------------------------------------------------------------*/
 
-	/* Compute the prescaler value to have TIM3 counter clock equal to 32 MHz */
 	uwPrescalerValue = (uint32_t)(SystemCoreClock / 16000000) - 1;
 
 	/* Set TIM3 instance */
@@ -131,10 +127,47 @@ int main(void)
 	sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
 	sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
 	sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-	sConfigOC.Pulse = aDutyCycle;
+	sConfigOC.Pulse = 800;
 
 	if(HAL_TIM_PWM_ConfigChannel(&TimHandle, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
 	{
+		Error_Handler();
+	}
+
+	/* Configure TIM3 as master & use the update event as Trigger Output (TRGO) */
+	sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
+	sMasterConfig.MasterSlaveMode     = TIM_MASTERSLAVEMODE_ENABLE;
+	if(HAL_TIMEx_MasterConfigSynchronization(&TimHandle, &sMasterConfig) != HAL_OK)
+	{
+		/* Configuration Error */
+		Error_Handler();
+	}
+
+	/*##-1- Configure the TIM4 peripheral as slave ##########################*/
+	/* The TIM4 is running:
+     - At (TIM3 frequency)/ (TIM4 period + 1) = 10Khz/10 = 1khz  */
+	TimHandleISR.Instance = TIM4;
+	TimHandleISR.Init.Period = 9;
+	TimHandleISR.Init.Prescaler = 0;
+	TimHandleISR.Init.ClockDivision = 0;
+	TimHandleISR.Init.CounterMode = TIM_COUNTERMODE_UP;
+	TimHandleISR.Init.RepetitionCounter = 0;
+
+	if (HAL_TIM_Base_Init(&TimHandleISR) != HAL_OK)		// Il faut coder l'interface MSP
+	{
+		/* Initialization Error */
+		Error_Handler();
+	}
+
+	/* Configure TIM4 in external clock mode in slave mode */
+	sSlaveConfig.SlaveMode     = TIM_SLAVEMODE_GATED;
+	sSlaveConfig.InputTrigger  = TIM_TS_ITR2;
+	sSlaveConfig.TriggerPolarity = TIM_TRIGGERPOLARITY_NONINVERTED;
+	sSlaveConfig.TriggerPrescaler = TIM_TRIGGERPRESCALER_DIV1;
+	sSlaveConfig.TriggerFilter = 0;
+	if (HAL_TIM_SlaveConfigSynchronization(&TimHandleISR, &sSlaveConfig) != HAL_OK)
+	{
+		/* Starting Error */
 		Error_Handler();
 	}
 
@@ -191,9 +224,15 @@ int main(void)
 	/************************** Init var ****************************************/
 	aState = IDLE;
 	aCount = 0;
-	aDutyCycle = 0;
+	aDutyCycle = 800;
 	aDirection = CW;
-	//setDutyCycle(aDirection, aDutyCycle);
+	setDutyCycle(aDirection, aDutyCycle);
+
+	/*##  Start the TIM4 Base generation in interrupt mode ####################*/
+	if (HAL_TIM_Base_Start_IT(&TimHandleISR) != HAL_OK)
+	{
+		Error_Handler();
+	}
 
 	/*##  Configure the UART peripheral #########################################*/
 	/* Put the USART peripheral in the Asynchronous mode (UART Mode) */
@@ -369,7 +408,7 @@ void chkBuf(void)
 {
 	/*## Put UART peripheral in reception process ###########################*/
 	/* Any data received will be stored in "RxBuffer" buffer : the number max of
-	data received is 5 */
+	data received is 6 */
 	if (HAL_UART_Receive(&UartHandle, (uint8_t *)aRxBuffer, RXBUFFERSIZE, 0x1FFFFFF) != HAL_OK)
 	{
 		/* Transfer error in reception process */
@@ -379,10 +418,7 @@ void chkBuf(void)
 	/*## Wait for 6 char (one command) ######################################*/
 	/*  Before starting a new communication transfer, you need to check the current
 	  state of the peripheral; if it’s busy you need to wait for the end of current
-	  transfer before starting a new one.
-	  For simplicity reasons, this example is just waiting till the end of the
-	  transfer, but application may perform other tasks while transfer operation
-	  is ongoing. */
+	  transfer before starting a new one.*/
 	while (HAL_UART_GetState(&UartHandle) != HAL_UART_STATE_READY)
 	{
 	}
@@ -427,6 +463,15 @@ void parseCom(void)
 	}
 }
 
+/**
+  * @brief  ISR main
+  * @param  htim : TIM handle
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	BSP_LED_Toggle(LED2);
+}
 
 #ifdef  USE_FULL_ASSERT
 

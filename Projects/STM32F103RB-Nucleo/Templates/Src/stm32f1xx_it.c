@@ -26,8 +26,8 @@
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
-//extern TIM_HandleTypeDef    TimHandle;
-extern UART_HandleTypeDef 	UartHandle;
+extern TIM_HandleTypeDef   		TimHandleISR;
+extern UART_HandleTypeDef 		UartHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
@@ -146,10 +146,10 @@ void SysTick_Handler(void)
   * @param  None
   * @retval None
   */
-/*void TIMx_IRQHandler(void)
+void TIM4_IRQHandler(void)
 {
-  HAL_TIM_IRQHandler(&TimHandle);
-}*/
+  HAL_TIM_IRQHandler(&TimHandleISR);
+}
 
 /**
   * @}
