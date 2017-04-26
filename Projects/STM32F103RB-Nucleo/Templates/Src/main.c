@@ -37,19 +37,21 @@ static GPIO_InitTypeDef  GPIO_InitStruct;
 UART_HandleTypeDef UartHandle;
 
 /* Buffers used for transmission */
-uint8_t aTxBuffer[] = "\n\r ****Servomotor UART communication****\n\r Enter 6 a characters command using keyboard :\n\r";
+uint8_t aTxBuffer[] = "\n\r ****Servomotor UART communication****\n\r Enter a 6 characters command using keyboard :\n\r";
 char aStatusTxBuf[15];
 
 /* Buffer used for reception */
 uint8_t aRxBuffer[RXBUFFERSIZE];
 
 /* Motor */
-static uint16_t aDutyCycle;
-static Motor_State aState;
-static uint8_t aDirection;
+uint16_t aDutyCycle;
+Motor_State aState;
+uint8_t aDirection;
+int32_t aPos1;
+int32_t aSpeed;
 
 /* Encoder */
-static uint16_t aCount;
+int32_t aCount;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -127,7 +129,7 @@ int main(void)
 	sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
 	sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
 	sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-	sConfigOC.Pulse = 800;
+	sConfigOC.Pulse = 0;
 
 	if(HAL_TIM_PWM_ConfigChannel(&TimHandle, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
 	{
@@ -165,7 +167,7 @@ int main(void)
 	sSlaveConfig.TriggerPolarity = TIM_TRIGGERPOLARITY_NONINVERTED;
 	sSlaveConfig.TriggerPrescaler = TIM_TRIGGERPRESCALER_DIV1;
 	sSlaveConfig.TriggerFilter = 0;
-	if (HAL_TIM_SlaveConfigSynchronization(&TimHandleISR, &sSlaveConfig) != HAL_OK)
+	if (HAL_TIM_SlaveConfigSynchronization_IT(&TimHandleISR, &sSlaveConfig) != HAL_OK)
 	{
 		/* Starting Error */
 		Error_Handler();
@@ -224,7 +226,7 @@ int main(void)
 	/************************** Init var ****************************************/
 	aState = IDLE;
 	aCount = 0;
-	aDutyCycle = 800;
+	aDutyCycle = 0;
 	aDirection = CW;
 	setDutyCycle(aDirection, aDutyCycle);
 
@@ -447,7 +449,7 @@ void parseCom(void)
 			{
 				aDirection = CCW;
 			}
-			strcpy(aStatusTxBuf, "PWM updated");
+			strcpy(aStatusTxBuf, "PWM updated\n\r");
 			aState = DIRECT_PWM;
 			break;
 		/*case 'P' :
@@ -457,9 +459,8 @@ void parseCom(void)
 			theState = SPEED;
 			break;*/
 		default :
-			strcpy(aStatusTxBuf, "Command Error");
+			strcpy(aStatusTxBuf, "Command Error\n\r");
 			break;
-
 	}
 }
 
@@ -470,7 +471,29 @@ void parseCom(void)
   */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-	BSP_LED_Toggle(LED2);
+	//BSP_LED_Toggle(LED2);
+	int32_t count = 0;
+	count = EncoderHandle.Instance->CNT;
+	/*if(count > 32768)
+	{
+		aPos1 = (65535 - count) * 30;
+	}
+	else
+	{
+		aPos1 = count * 30;						// degré avec q = 8
+	}*/
+	aPos1 = count * 30;
+	aSpeed = (count - aCount) * 30000;			// degré/sec avec q = 8
+	aCount = count;
+
+	switch(aState)
+	{
+		case DIRECT_PWM:
+			setDutyCycle(aDirection, aDutyCycle);
+			break;
+		default:		// IDLE
+			break;
+	}
 }
 
 #ifdef  USE_FULL_ASSERT

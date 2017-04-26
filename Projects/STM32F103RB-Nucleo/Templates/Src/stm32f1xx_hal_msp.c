@@ -56,7 +56,7 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef *htim)
 
     /*##-2- Configure the NVIC for TIMx ########################################*/
     /* Set the TIMx priority */
-    HAL_NVIC_SetPriority(TIM4_IRQn, 0, 0);
+    HAL_NVIC_SetPriority(TIM4_IRQn, 1, 0);
 
     /* Enable the TIMx global Interrupt */
     HAL_NVIC_EnableIRQ(TIM4_IRQn);
@@ -162,7 +162,7 @@ void HAL_TIM_Encoder_MspInit(TIM_HandleTypeDef *htim)
   /*##-2- Configure I/Os #####################################################*/
   /* Common configuration for all channels */
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
 
   /* Channel 1 configuration */
