@@ -12,6 +12,7 @@
 #include "string.h"
 #include "stdlib.h"
 #include "motor.h"
+#include "trajectory.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -43,15 +44,22 @@ char aStatusTxBuf[15];
 /* Buffer used for reception */
 uint8_t aRxBuffer[RXBUFFERSIZE];
 
+/* Flags */
+uint8_t initF;
+
 /* Motor */
 uint16_t aDutyCycle;
 Motor_State aState;
 uint8_t aDirection;
 int32_t aPos1;
+int32_t aPos2;
 int32_t aSpeed;
 
 /* Encoder */
-int32_t aCount;
+uint32_t aCount;
+
+/* Trajectory */
+int32_t aPosCommand;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -224,8 +232,11 @@ int main(void)
 	//HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);
 
 	/************************** Init var ****************************************/
-	aState = IDLE;
+	aState = PWM;
+	initF = 0;
 	aCount = 0;
+	aPos1 = 0;
+	aPos2 = 0;
 	aDutyCycle = 0;
 	aDirection = CW;
 	setDutyCycle(aDirection, aDutyCycle);
@@ -450,13 +461,16 @@ void parseCom(void)
 				aDirection = CCW;
 			}
 			strcpy(aStatusTxBuf, "PWM updated\n\r");
-			aState = DIRECT_PWM;
+			aState = PWM;
 			break;
-		/*case 'P' :
-			theState = POS;
+		case 'P' :
+			memcpy(num, aRxBuffer+2, 4);
+			aPosCommand = (int32_t)(atoi(num));
+			strcpy(aStatusTxBuf, "POS updated\n\r");
+			aState = POS;
 			break;
-		case 'S' :
-			theState = SPEED;
+		/*case 'S' :
+			aState = SPEED;
 			break;*/
 		default :
 			strcpy(aStatusTxBuf, "Command Error\n\r");
@@ -472,28 +486,39 @@ void parseCom(void)
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	//BSP_LED_Toggle(LED2);
-	int32_t count = 0;
+	uint32_t count = 0;
+	//int32_t posErr = 0;
 	count = EncoderHandle.Instance->CNT;
-	/*if(count > 32768)
+	aSpeed = (count - aCount);
+	if(aDirection == CW)
 	{
-		aPos1 = (65535 - count) * 30;
+		if(aSpeed < 0)
+		{
+			aSpeed = (65535 - aCount) + count;
+		}
 	}
-	else
+	else		// CCW
 	{
-		aPos1 = count * 30;						// degré avec q = 8
-	}*/
-	aPos1 = count * 30;
-	aSpeed = (count - aCount) * 30000;			// degré/sec avec q = 8
+		if(aSpeed > 0)
+		{
+			aSpeed = (count - 65535) - aCount;
+		}
+	}
+	aPos2 = aPos1;
+	aPos1 += aSpeed * 30;
 	aCount = count;
 
-	switch(aState)
+	if(initF)									// nouvelle trajectoire
 	{
-		case DIRECT_PWM:
-			setDutyCycle(aDirection, aDutyCycle);
-			break;
-		default:		// IDLE
-			break;
+		initF = 0;
 	}
+
+	/*if(aState != PWM)							// calcul des buts
+	{
+		posErr = aPosCommand - aPos1;
+	}*/
+
+	setDutyCycle(aDirection, aDutyCycle);
 }
 
 #ifdef  USE_FULL_ASSERT

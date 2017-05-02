@@ -2,7 +2,7 @@
  * motor.h
  *
  *  Created on: 9 avr. 2017
- *      Author: Eric
+ *      Author: Eric Cloutier
  */
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef MOTOR_H_
@@ -17,10 +17,9 @@
   */
 typedef enum
 {
-	IDLE			= 0x00,
-	DIRECT_PWM		= 0x01,
-	SPEED			= 0x02,
-	POS				= 0x03
+	PWM				= 0x00,
+	SPEED			= 0x01,
+	POS				= 0x02,
 }Motor_State;
 
 /**

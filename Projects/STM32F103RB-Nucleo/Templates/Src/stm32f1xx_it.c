@@ -148,7 +148,8 @@ void SysTick_Handler(void)
   */
 void TIM4_IRQHandler(void)
 {
-  HAL_TIM_IRQHandler(&TimHandleISR);
+	// TIM update event donc HAL_TIM_PeriodElapsedCallback() est exécuté
+	HAL_TIM_IRQHandler(&TimHandleISR);
 }
 
 /**
